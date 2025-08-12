@@ -78,3 +78,4 @@ object AppModule {
         LightSensorManager(context) // Puedes leer alpha de settingsDataStore si lo deseas
 }
 
+

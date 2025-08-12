@@ -13,3 +13,4 @@ class SpeciesRepository(private val speciesDao: SpeciesDao) {
     suspend fun update(species: SpeciesEntity) = speciesDao.update(species)
 }
 
+

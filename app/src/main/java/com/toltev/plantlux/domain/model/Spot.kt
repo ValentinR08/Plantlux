@@ -8,3 +8,4 @@ data class Spot(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+

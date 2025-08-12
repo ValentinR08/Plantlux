@@ -24,6 +24,7 @@ fun MeasureScreen(
     val selectedSpecies by viewModel.selectedSpecies.collectAsState()
     val lightBand by viewModel.lightBand.collectAsState()
     val showSaveDialog = remember { mutableStateOf(false) }
+    val showSensorInfoDialog = remember { mutableStateOf(false) }
     val hasSensor by viewModel.hasSensor.collectAsState()
 
     // Animar el valor de lux para suavizar cambios visuales
@@ -67,6 +68,14 @@ fun MeasureScreen(
                 ) {
                     Text("Guardar punto de luz")
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+                // Botón de debug para mostrar información del sensor
+                OutlinedButton(
+                    onClick = { showSensorInfoDialog.value = true },
+                    modifier = Modifier.semantics { contentDescription = "Información del sensor" }
+                ) {
+                    Text("Info del Sensor")
+                }
             }
             if (showSaveDialog.value) {
                 SaveSpotDialog(
@@ -75,6 +84,12 @@ fun MeasureScreen(
                         showSaveDialog.value = false
                     },
                     onDismiss = { showSaveDialog.value = false }
+                )
+            }
+            if (showSensorInfoDialog.value) {
+                SensorInfoDialog(
+                    sensorInfo = viewModel.sensorInfo,
+                    onDismiss = { showSensorInfoDialog.value = false }
                 )
             }
         } else {
@@ -175,6 +190,27 @@ fun SaveSpotDialog(onSave: (String) -> Unit, onDismiss: () -> Unit) {
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
                 Text("Cancelar")
+            }
+        }
+    )
+}
+
+// Composable para mostrar información del sensor
+@Composable
+fun SensorInfoDialog(sensorInfo: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Información del Sensor") },
+        text = {
+            Text(
+                text = sensorInfo,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Cerrar")
             }
         }
     )

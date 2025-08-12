@@ -8,3 +8,4 @@ data class Reading(
     val lux: Float
 )
 
+

@@ -14,6 +14,10 @@ PlantLux es una aplicación Android desarrollada en Kotlin que utiliza las tecno
 - **WorkManager**: Tareas en segundo plano
 - **Navigation Compose**: Navegación entre pantallas
 - **Material Design 3**: Diseño moderno y accesible
+- **Sensor de Luz**: Monitoreo en tiempo real de la iluminación
+- **Gráficos Interactivos**: Visualización de datos de medición
+- **Estadísticas Avanzadas**: Análisis de patrones de luz
+- **Exportación de Datos**: Compartir mediciones en formato CSV
 
 ## 🛠️ Tecnologías Utilizadas
 
@@ -208,6 +212,51 @@ Las dependencias se gestionan centralmente en `gradle/libs.versions.toml`:
 - Actualizar DAOs en `data/local/`
 - Modificar repositorios en `data/repo/`
 
+## 🆕 Novedades (v1.2)
+
+### ✅ Correcciones Implementadas
+
+#### Sensor de Luz Funcional
+- **Problema Solucionado**: El sensor de luz no leía correctamente los valores
+- **Solución**: Inicio automático del sensor al abrir la pantalla de medición
+- **Mejoras**: Logging detallado y mejor manejo de errores
+- **Resultado**: Lecturas precisas y en tiempo real de la iluminación
+
+#### Pantalla de Detalle Optimizada
+- **Problema Solucionado**: Movimiento extraño y línea verde recta en el gráfico
+- **Solución**: Scroll vertical, memoización de datos y optimización de recomposiciones
+- **Mejoras**: Estadísticas en tiempo real, gráfico interactivo y mejor UX
+- **Resultado**: Interfaz fluida y estable con datos visuales precisos
+
+### 🎯 Nuevas Funcionalidades
+
+1. **Medición en Tiempo Real**
+   - Sensor de luz automático
+   - Valores suavizados con algoritmo EMA
+   - Clasificación automática de niveles de luz
+
+2. **Análisis de Datos**
+   - Estadísticas detalladas (máximo, promedio, mínimo)
+   - Gráfico de tendencias por hora
+   - Historial completo de mediciones
+
+3. **Gestión de Puntos de Luz**
+   - Crear y gestionar puntos de medición
+   - Información detallada de cada spot
+   - Exportación de datos en CSV
+
+4. **Interfaz Mejorada**
+   - Diseño Material Design 3
+   - Navegación intuitiva
+   - Feedback visual en tiempo real
+
+### 🔧 Mejoras Técnicas
+
+- **Performance**: Reducción de recomposiciones innecesarias
+- **Stability**: Mejor manejo de estados y errores
+- **Debugging**: Logging detallado para troubleshooting
+- **Architecture**: Optimización de Clean Architecture
+
 ## 🚨 Troubleshooting
 
 ### Problemas Comunes
@@ -223,6 +272,16 @@ Las dependencias se gestionan centralmente en `gradle/libs.versions.toml`:
 3. **Error de Hilt**
    - Verificar anotaciones `@HiltAndroidApp` y `@AndroidEntryPoint`
    - Revisar configuración de módulos en `di/`
+
+4. **Sensor de Luz No Funciona**
+   - Verificar que el dispositivo tenga sensor de luz
+   - Usar el botón "Info del Sensor" para debugging
+   - Revisar logs con filtro "LightSensorManager"
+
+5. **Gráfico No Muestra Datos**
+   - Realizar al menos una medición en el punto de luz
+   - Verificar que haya datos en la base de datos
+   - Comprobar que el StateFlow esté funcionando correctamente
 
 ## 📄 Licencia
 
@@ -245,3 +304,4 @@ Este proyecto está bajo la licencia [ESPECIFICAR_LICENCIA].
 ---
 
 **PlantLux** - Cuidando tus plantas con tecnología moderna 🌱✨
+

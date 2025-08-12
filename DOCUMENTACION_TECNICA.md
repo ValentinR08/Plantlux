@@ -538,3 +538,225 @@ fun validatePlantInput(name: String, species: String): ValidationResult {
 ```
 
 Esta documentación técnica proporciona una guía completa para entender y trabajar con el proyecto PlantLux, incluyendo todos los aspectos técnicos, patrones de diseño y mejores prácticas implementadas.
+
+## Actualizaciones y Mejoras Recientes
+
+### Corrección del Sensor de Luz (v1.1)
+
+#### Problema Identificado
+El sensor de luz no leía correctamente los valores debido a que el `LightSensorManager` nunca se iniciaba automáticamente.
+
+#### Solución Implementada
+1. **Inicio Automático del Sensor**:
+   ```kotlin
+   // En MeasureViewModel.kt
+   init {
+       // Iniciar el sensor de luz
+       lightSensorManager.start()
+       // ... resto del código
+   }
+   ```
+
+2. **Limpieza del Sensor**:
+   ```kotlin
+   override fun onCleared() {
+       super.onCleared()
+       lightSensorManager.stop()
+   }
+   ```
+
+3. **Mejor Manejo de Errores**:
+   ```kotlin
+   fun start() {
+       if (lightSensor == null) {
+           Log.w("LightSensorManager", "No se encontró sensor de luz en el dispositivo")
+           _luxFlow.value = null
+           _hasSensor.value = false
+           return
+       }
+       if (!isRegistered) {
+           try {
+               sensorManager.registerListener(this, lightSensor, SensorManager.SENSOR_DELAY_NORMAL)
+               isRegistered = true
+               _hasSensor.value = true
+               Log.d("LightSensorManager", "Sensor de luz iniciado correctamente")
+           } catch (e: Exception) {
+               Log.e("LightSensorManager", "Error al iniciar sensor de luz: ${e.message}")
+               _hasSensor.value = false
+           }
+       }
+   }
+   ```
+
+4. **Logging Detallado**:
+   ```kotlin
+   override fun onSensorChanged(event: SensorEvent?) {
+       event?.let {
+           val lux = it.values.firstOrNull() ?: return
+           emaValue = if (emaValue == null) lux else ema(emaValue!!, lux, alpha)
+           _luxFlow.value = emaValue
+           Log.v("LightSensorManager", "Nueva lectura de luz: ${"%.1f".format(lux)} lux (suavizado: ${"%.1f".format(emaValue)} lux)")
+       }
+   }
+   ```
+
+### Optimización de la Pantalla de Detalle del Punto de Luz (v1.2)
+
+#### Problema Identificado
+La pantalla de detalle del punto de luz mostraba una línea verde recta que no cambiaba y tenía movimientos extraños en la interfaz.
+
+#### Solución Implementada
+
+1. **Scroll Vertical**:
+   ```kotlin
+   val scrollState = rememberScrollState()
+   
+   Column(
+       modifier = Modifier
+           .fillMaxSize()
+           .verticalScroll(scrollState)
+           .padding(16.dp)
+   ) {
+       // Contenido de la pantalla
+   }
+   ```
+
+2. **Memoización de Estadísticas**:
+   ```kotlin
+   val stats by remember(hourlyAverages) {
+       derivedStateOf {
+           if (hourlyAverages.isNotEmpty()) {
+               val maxLux = hourlyAverages.values.maxOrNull() ?: 0f
+               val minLux = hourlyAverages.values.minOrNull() ?: 0f
+               val avgLux = hourlyAverages.values.average().toFloat()
+               val totalReadings = hourlyAverages.values.count { it > 0 }
+               StatsData(maxLux, minLux, avgLux, totalReadings)
+           } else null
+       }
+   }
+   ```
+
+3. **Optimización del Gráfico**:
+   ```kotlin
+   val chartData by remember(hourlyAverages) {
+       derivedStateOf {
+           val maxLux = hourlyAverages.values.maxOrNull() ?: 1f
+           val minLux = hourlyAverages.values.minOrNull() ?: 0f
+           val luxRange = maxLux - minLux
+           val effectiveMaxLux = if (luxRange > 0) maxLux else maxLux + 1f
+           Triple(maxLux, effectiveMaxLux, hourlyAverages)
+       }
+   }
+   ```
+
+4. **StateFlow para Datos del Gráfico**:
+   ```kotlin
+   fun getHourlyAveragesFlow(spotId: Long): StateFlow<Map<Int, Float>> =
+       readingRepository.getReadingsForSpot(spotId)
+           .map { readings ->
+               val domainReadings = readings.map { 
+                   Reading(id = it.id, spotId = it.spotId, timestamp = it.timestamp, lux = it.lux) 
+               }
+               computeSpotStatsUseCase.computeHourlyAverages(domainReadings)
+           }
+           .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+   ```
+
+### Nuevas Funcionalidades Agregadas
+
+1. **Información del Spot Mejorada**:
+   - Tarjeta con nombre del spot
+   - Notas del spot (si están disponibles)
+   - Fecha y hora de creación
+
+2. **Estadísticas Básicas**:
+   - Máximo, promedio, mínimo de lux
+   - Número total de lecturas
+   - Diseño en fila para fácil lectura
+
+3. **Gráfico Mejorado**:
+   - Manejo de casos sin datos
+   - Líneas de fondo para las horas
+   - Puntos en los datos para mejor visualización
+   - Escalado mejorado del eje Y
+
+4. **Botón de Información del Sensor**:
+   - Muestra información detallada del sensor de luz
+   - Útil para debugging y verificación
+
+### Mejoras de Performance
+
+1. **Reducción de Recomposiciones**:
+   - Uso de `remember()` y `derivedStateOf()`
+   - Memoización de cálculos costosos
+   - StateFlow optimizado para datos reactivos
+
+2. **Mejor Manejo de Estados**:
+   - Estados de carga y error
+   - Manejo elegante de datos vacíos
+   - Feedback visual mejorado
+
+3. **Optimización de Layout**:
+   - Scroll vertical para contenido largo
+   - Cards organizadas para mejor estructura visual
+   - Espaciado consistente
+
+### Debugging y Monitoreo
+
+1. **Logging Detallado**:
+   ```kotlin
+   // Información del sensor
+   fun getSensorInfo(): String {
+       return if (lightSensor != null) {
+           "Sensor: ${lightSensor.name}, Vendor: ${lightSensor.vendor}, " +
+           "Version: ${lightSensor.version}, Max Range: ${lightSensor.maximumRange}, " +
+           "Resolution: ${lightSensor.resolution}, Power: ${lightSensor.power}mA, " +
+           "IsRegistered: $isRegistered"
+       } else {
+           "No hay sensor de luz disponible"
+       }
+   }
+   ```
+
+2. **Manejo de Errores**:
+   - Try-catch en operaciones críticas
+   - Logs informativos para debugging
+   - Estados de fallback para casos de error
+
+### Próximas Mejoras Planificadas
+
+1. **Medición Automática**: Opción para iniciar medición automáticamente al entrar al detalle del spot
+2. **Notificaciones Push**: Alertas de luz baja en tiempo real
+3. **Exportación Avanzada**: Más formatos de exportación (PDF, Excel)
+4. **Análisis de Tendencias**: Gráficos de tendencias a largo plazo
+5. **Configuración Avanzada**: Más opciones de personalización del sensor
+
+### Notas de Instalación
+
+Para probar las nuevas funcionalidades:
+
+1. **Compilar la aplicación**:
+   ```bash
+   ./gradlew assembleDebug
+   ```
+
+2. **Verificar el sensor**:
+   - Ir a la pantalla "Medir"
+   - Verificar que se muestre un valor de lux
+   - Usar el botón "Info del Sensor" para debugging
+
+3. **Probar el detalle del spot**:
+   - Crear un punto de luz
+   - Realizar algunas mediciones
+   - Verificar que el gráfico y estadísticas funcionen correctamente
+
+### Compatibilidad
+
+- **Android**: API 24+ (Android 7.0+)
+- **Kotlin**: 2.0.21
+- **Compose**: BOM 2024.05.00
+- **Room**: 2.6.1
+- **Hilt**: 2.52
+
+Esta documentación se actualiza regularmente con cada nueva versión y mejora del proyecto.
+

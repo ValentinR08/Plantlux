@@ -40,6 +40,9 @@ class MeasureViewModel @Inject constructor(
 
     // Disponibilidad del sensor
     val hasSensor: StateFlow<Boolean> = lightSensorManager.hasSensor
+    
+    // Información de debug del sensor
+    val sensorInfo: String = lightSensorManager.getSensorInfo()
 
     // Flujos de ajustes de alerta
     val alertEnabled = settingsDataStore.alertEnabled
@@ -71,6 +74,9 @@ class MeasureViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     init {
+        // Iniciar el sensor de luz
+        lightSensorManager.start()
+        
         // Alertas de luz baja
         viewModelScope.launch {
             combine(lux, alertEnabled, alertThreshold) { luxValue, enabled, threshold ->
@@ -89,6 +95,11 @@ class MeasureViewModel @Inject constructor(
     }
 
     fun onSpeciesSelected(name: String) { _selectedSpecies.value = name }
+
+    override fun onCleared() {
+        super.onCleared()
+        lightSensorManager.stop()
+    }
 
     // Etiquetas de ambiente orientativas para el usuario
     fun getAmbienceLabel(lux: Float?): String = when (lux ?: 0f) {

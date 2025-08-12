@@ -140,3 +140,4 @@ Este proyecto sigue [Semantic Versioning](https://semver.org/):
 ---
 
 **PlantLux** - Cuidando tus plantas con tecnología moderna 🌱✨
+

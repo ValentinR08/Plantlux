@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
 
 // ViewModel para la pantalla de lista y detalle de spots
 @HiltViewModel
@@ -63,12 +64,16 @@ class SpotsViewModel @Inject constructor(
             list.map { Reading(id = it.id, spotId = it.spotId, timestamp = it.timestamp, lux = it.lux) }
         }
 
-    // Calcular promedios por hora para un spot (flujo mapeado a snapshot simple)
-    fun getHourlyAverages(spotId: Long): Map<Int, Float> {
-        // Nota: Para simplicidad, esto debería ser un StateFlow en producción
-        // Aquí devolvemos un snapshot vacío hasta que se suscriba la UI a un flujo dedicado
-        return emptyMap()
-    }
+    // Calcular promedios por hora para un spot (StateFlow)
+    fun getHourlyAveragesFlow(spotId: Long): StateFlow<Map<Int, Float>> =
+        readingRepository.getReadingsForSpot(spotId)
+            .map { readings ->
+                val domainReadings = readings.map { 
+                    Reading(id = it.id, spotId = it.spotId, timestamp = it.timestamp, lux = it.lux) 
+                }
+                computeSpotStatsUseCase.computeHourlyAverages(domainReadings)
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     // Estado para feedback visual de la medición
     private val _isMeasuring = MutableStateFlow(false)

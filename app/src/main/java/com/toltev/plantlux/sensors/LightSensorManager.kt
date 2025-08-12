@@ -5,6 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,16 @@ class LightSensorManager(
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val lightSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+
+    init {
+        Log.d("LightSensorManager", "Inicializando LightSensorManager")
+        if (lightSensor != null) {
+            Log.i("LightSensorManager", "Sensor de luz detectado: ${lightSensor.name}")
+            Log.d("LightSensorManager", getSensorInfo())
+        } else {
+            Log.w("LightSensorManager", "No se detectó sensor de luz en el dispositivo")
+        }
+    }
 
     // Disponibilidad del sensor
     private val _hasSensor = MutableStateFlow(lightSensor != null)
@@ -36,25 +47,48 @@ class LightSensorManager(
 
     fun hasLightSensor(): Boolean = lightSensor != null
 
+    // Método para obtener información de debug del sensor
+    fun getSensorInfo(): String {
+        return if (lightSensor != null) {
+            "Sensor: ${lightSensor.name}, Vendor: ${lightSensor.vendor}, Version: ${lightSensor.version}, " +
+            "Max Range: ${lightSensor.maximumRange}, Resolution: ${lightSensor.resolution}, " +
+            "Power: ${lightSensor.power}mA, IsRegistered: $isRegistered"
+        } else {
+            "No hay sensor de luz disponible"
+        }
+    }
+
     // Inicia la escucha del sensor
     fun start() {
         if (lightSensor == null) {
+            Log.w("LightSensorManager", "No se encontró sensor de luz en el dispositivo")
             _luxFlow.value = null // Fallback: no hay sensor
             _hasSensor.value = false
             return
         }
         if (!isRegistered) {
-            sensorManager.registerListener(this, lightSensor, SensorManager.SENSOR_DELAY_NORMAL)
-            isRegistered = true
-            _hasSensor.value = true
+            try {
+                sensorManager.registerListener(this, lightSensor, SensorManager.SENSOR_DELAY_NORMAL)
+                isRegistered = true
+                _hasSensor.value = true
+                Log.d("LightSensorManager", "Sensor de luz iniciado correctamente")
+            } catch (e: Exception) {
+                Log.e("LightSensorManager", "Error al iniciar sensor de luz: ${e.message}")
+                _hasSensor.value = false
+            }
         }
     }
 
     // Detiene la escucha del sensor
     fun stop() {
         if (isRegistered) {
-            sensorManager.unregisterListener(this)
-            isRegistered = false
+            try {
+                sensorManager.unregisterListener(this)
+                isRegistered = false
+                Log.d("LightSensorManager", "Sensor de luz detenido")
+            } catch (e: Exception) {
+                Log.e("LightSensorManager", "Error al detener sensor de luz: ${e.message}")
+            }
         }
     }
 
@@ -64,6 +98,7 @@ class LightSensorManager(
             val lux = it.values.firstOrNull() ?: return
             emaValue = if (emaValue == null) lux else ema(emaValue!!, lux, alpha)
             _luxFlow.value = emaValue
+            Log.v("LightSensorManager", "Nueva lectura de luz: ${"%.1f".format(lux)} lux (suavizado: ${"%.1f".format(emaValue)} lux)")
         }
     }
 
