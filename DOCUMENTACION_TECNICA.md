@@ -305,6 +305,172 @@ abstract class PlantLuxDatabase : RoomDatabase() {
 }
 ```
 
+## Componentes de Sensores
+
+### LightSensorManager
+
+El `LightSensorManager` es un componente crítico que gestiona el sensor de luz ambiental del dispositivo Android. Proporciona lecturas de lux (luminosidad) con suavizado EMA (Exponential Moving Average) para estabilizar las mediciones.
+
+#### Características Principales
+
+- **Detección Automática**: Detecta automáticamente si el dispositivo tiene sensor de luz
+- **Suavizado EMA**: Aplica suavizado exponencial para reducir ruido en las lecturas
+- **StateFlow Reactivo**: Expone datos a través de StateFlow para integración con Compose
+- **Manejo de Ciclo de Vida**: Gestión automática del registro/desregistro del sensor
+- **Logging Detallado**: Logs informativos para debugging y monitoreo
+
+#### Implementación
+
+```kotlin
+class LightSensorManager(
+    private val context: Context,
+    private val alpha: Float = 0.25f // Factor de suavizado configurable
+) : SensorEventListener {
+
+    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private val lightSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+
+    // StateFlow que expone el valor suavizado de lux
+    private val _luxFlow = MutableStateFlow<Float?>(null)
+    val luxFlow: StateFlow<Float?> = _luxFlow
+
+    // Disponibilidad del sensor
+    private val _hasSensor = MutableStateFlow(lightSensor != null)
+    val hasSensor: StateFlow<Boolean> = _hasSensor
+}
+```
+
+#### Métodos Principales
+
+**Iniciar Sensor**:
+```kotlin
+fun start() {
+    if (lightSensor == null) {
+        Log.w("LightSensorManager", "No se encontró sensor de luz en el dispositivo")
+        _luxFlow.value = null
+        _hasSensor.value = false
+        return
+    }
+    if (!isRegistered) {
+        try {
+            sensorManager.registerListener(this, lightSensor, SensorManager.SENSOR_DELAY_NORMAL)
+            isRegistered = true
+            _hasSensor.value = true
+            Log.d("LightSensorManager", "Sensor de luz iniciado correctamente")
+        } catch (e: Exception) {
+            Log.e("LightSensorManager", "Error al iniciar sensor de luz: ${e.message}")
+            _hasSensor.value = false
+        }
+    }
+}
+```
+
+**Detener Sensor**:
+```kotlin
+fun stop() {
+    if (isRegistered) {
+        try {
+            sensorManager.unregisterListener(this)
+            isRegistered = false
+            Log.d("LightSensorManager", "Sensor de luz detenido")
+        } catch (e: Exception) {
+            Log.e("LightSensorManager", "Error al detener sensor de luz: ${e.message}")
+        }
+    }
+}
+```
+
+**Procesamiento de Lecturas**:
+```kotlin
+override fun onSensorChanged(event: SensorEvent?) {
+    event?.let {
+        val lux = it.values.firstOrNull() ?: return
+        emaValue = if (emaValue == null) lux else ema(emaValue!!, lux, alpha)
+        _luxFlow.value = emaValue
+        Log.v("LightSensorManager", "Nueva lectura de luz: ${"%.1f".format(lux)} lux (suavizado: ${"%.1f".format(emaValue)} lux)")
+    }
+}
+```
+
+**Suavizado EMA**:
+```kotlin
+private fun ema(prev: Float, new: Float, alpha: Float): Float =
+    alpha * new + (1 - alpha) * prev
+```
+
+#### Información del Sensor
+
+```kotlin
+fun getSensorInfo(): String {
+    return if (lightSensor != null) {
+        "Sensor: ${lightSensor.name}, Vendor: ${lightSensor.vendor}, " +
+        "Version: ${lightSensor.version}, Max Range: ${lightSensor.maximumRange}, " +
+        "Resolution: ${lightSensor.resolution}, Power: ${lightSensor.power}mA, " +
+        "IsRegistered: $isRegistered"
+    } else {
+        "No hay sensor de luz disponible"
+    }
+}
+```
+
+#### Integración con Compose
+
+```kotlin
+@Composable
+fun MeasureScreen(viewModel: MeasureViewModel) {
+    val luxValue by viewModel.luxValue.collectAsState()
+    val hasSensor by viewModel.hasSensor.collectAsState()
+    
+    DisposableEffect(Unit) {
+        viewModel.startMeasurement()
+        onDispose {
+            viewModel.stopMeasurement()
+        }
+    }
+    
+    // UI que muestra el valor de lux
+    Text("Lux: ${luxValue?.let { "%.1f".format(it) } ?: "N/A"}")
+}
+```
+
+#### Configuración en Hilt
+
+```kotlin
+@Module
+@InstallIn(SingletonComponent::class)
+object AppModule {
+    
+    @Provides
+    @Singleton
+    fun provideLightSensorManager(
+        @ApplicationContext context: Context, 
+        settingsDataStore: SettingsDataStore
+    ): LightSensorManager =
+        LightSensorManager(context) // Alpha configurable desde settingsDataStore
+}
+```
+
+#### Casos de Uso
+
+1. **Medición en Tiempo Real**: Proporciona lecturas continuas de luminosidad
+2. **Análisis de Condiciones de Luz**: Determina si una ubicación recibe suficiente luz
+3. **Optimización de Crecimiento**: Ayuda a encontrar el mejor lugar para plantas
+4. **Monitoreo de Tendencias**: Registra cambios en la iluminación a lo largo del tiempo
+
+#### Consideraciones de Performance
+
+- **Frecuencia de Muestreo**: Usa `SENSOR_DELAY_NORMAL` para balance entre precisión y batería
+- **Suavizado**: Reduce ruido sin afectar la responsividad
+- **Gestión de Memoria**: Libera recursos automáticamente al detener el sensor
+- **Logging Condicional**: Logs verbosos solo en builds de debug
+
+#### Manejo de Errores
+
+- **Sensor No Disponible**: Maneja graciosamente dispositivos sin sensor de luz
+- **Errores de Registro**: Captura y logea errores de registro del sensor
+- **Valores Nulos**: Proporciona valores por defecto cuando no hay lecturas
+- **Recuperación**: Permite reintentar el registro del sensor
+
 ## WorkManager para Tareas en Segundo Plano
 
 ### Worker de Cuidado de Plantas

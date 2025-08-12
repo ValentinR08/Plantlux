@@ -99,3 +99,4 @@ suspend fun markSpotRotated(spotId: Long, spotRepository: com.toltev.plantlux.da
 }
 
 
+
