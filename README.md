@@ -297,9 +297,9 @@ Este proyecto está bajo la licencia [ESPECIFICAR_LICENCIA].
 
 ## 📞 Contacto
 
-- **Desarrollador**: [NOMBRE_DEL_DESARROLLADOR]
-- **Email**: [EMAIL]
-- **Proyecto**: [URL_DEL_PROYECTO]
+- **Desarrollador**: [ValentinR08]
+- **Email**: [Valentonriversan@gmail.com]
+- **Proyecto**: [URL_DEL_PROYECT]
 
 ---
 
