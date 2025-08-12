@@ -298,7 +298,7 @@ Este proyecto está bajo la licencia [ESPECIFICAR_LICENCIA].
 ## 📞 Contacto
 
 - **Desarrollador**: [ValentinR08]
-- **Email**: [Valentonriversan@gmail.com]
+- **Email**: [Valentinriveradelossantos@gmail.com]
 - **Proyecto**: [URL_DEL_PROYECT]
 
 ---
